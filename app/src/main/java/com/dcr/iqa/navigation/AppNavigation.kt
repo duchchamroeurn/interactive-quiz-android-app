@@ -8,23 +8,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dcr.iqa.WelcomeScreen
-import com.dcr.iqa.data.Option
-import com.dcr.iqa.data.Question
-import com.dcr.iqa.data.Quiz
-import com.dcr.iqa.data.QuizData
-import com.dcr.iqa.screens.quiz.overview.QuizOverviewScreen
-import com.dcr.iqa.screens.quiz.result.QuizResultsScreen
-import com.dcr.iqa.screens.quiz.review.QuizReviewScreen
-import com.dcr.iqa.screens.quiz.taking.QuizTakingScreen
-import com.dcr.iqa.screens.submitted.answers.SubmittedAnswersScreen
+import com.dcr.iqa.data.model.Option
+import com.dcr.iqa.data.model.Question
+import com.dcr.iqa.data.model.Quiz
+import com.dcr.iqa.data.model.QuizData
+import com.dcr.iqa.ui.screens.quiz.overview.QuizOverviewScreen
+import com.dcr.iqa.ui.screens.quiz.result.QuizResultsScreen
+import com.dcr.iqa.ui.screens.quiz.review.QuizReviewScreen
+import com.dcr.iqa.ui.screens.quiz.taking.QuizTakingScreen
+import com.dcr.iqa.ui.screens.submitted.answers.SubmittedAnswersScreen
 import kotlinx.coroutines.delay
 
 @Composable
-fun QuizApp() {
+fun QuizApp(viewModel: AppNavigationViewModel = hiltViewModel()) {
+
+    val startDestination = viewModel.loadStartDestination()
+
     // This is the primary NavController for the whole app
     val primaryNavController = rememberNavController()
 
@@ -35,7 +39,7 @@ fun QuizApp() {
             Quiz("q3", "Movie Trivia", "How well do you know your movies?", 20, 10)
         )
     }
-    NavHost(navController = primaryNavController, startDestination = "welcome") {
+    NavHost(navController = primaryNavController, startDestination = startDestination) {
         composable("welcome") {
             WelcomeScreen(navController = primaryNavController)
         }
