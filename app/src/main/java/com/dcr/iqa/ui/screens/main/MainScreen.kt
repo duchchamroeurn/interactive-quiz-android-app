@@ -74,7 +74,7 @@ fun MainScreen(mainNavController: NavController, quizzes: List<Quiz>) {
             startDestination = "home",
             Modifier.padding(padding)
         ) {
-            composable("home") { HomeScreen(navController = mainNavController, quizzes = quizzes) }
+            composable("home") { HomeScreen(navController = mainNavController) }
             composable("profile") { ProfileScreen(mainNavController) }
         }
     }

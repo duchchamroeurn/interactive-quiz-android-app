@@ -3,47 +3,61 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.dcr.iqa.data.model.Quiz
+import com.dcr.iqa.ui.screens.home.HomeViewModel
 import com.dcr.iqa.ui.screens.home.views.JoinQuizSection
 import com.dcr.iqa.ui.screens.home.views.QuizItem
 import com.dcr.iqa.ui.screens.home.views.WelcomeSection
 
 @Composable
-fun HomeScreen(navController: NavController, quizzes: List<Quiz>) {
-    // In a real app, you would get this from a ViewModel
-    val userName = "Alex"
-    // LazyColumn makes the whole screen scrollable and is efficient for lists.
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(0.dp),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Adds space between items
-    ) {
-        item {
-            WelcomeSection(userName = userName)
-        }
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
-        item {
-            JoinQuizSection()
+    if (uiState.isLoading) {
+        // Show a loading indicator in the center
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
-
-        item {
-            Text(
-                text = "Or Practice a Quiz",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+    } else if (uiState.error != null) {
+        // Show an error message
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = "Error: ${uiState.error}", color = MaterialTheme.colorScheme.error)
         }
-
-        items(quizzes) { quiz ->
-            QuizItem(
-                quiz = quiz,
-                navController = navController // Pass the NavController
-            )
+    } else {
+        // Your main UI content
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                WelcomeSection(userName = uiState.username)
+            }
+            item {
+                JoinQuizSection(navController)
+            }
+            item {
+                Text(
+                    text = "Or Practice a Quiz",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            items(uiState.availableQuizzes) { availableQuiz ->
+                // You might need to adjust QuizItem to accept an AvailableQuiz object
+                // or just its nested quiz object.
+                QuizItem(
+                    session = availableQuiz,
+                    navController = navController
+                )
+            }
         }
     }
 }

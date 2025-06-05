@@ -9,14 +9,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navigation
 import com.dcr.iqa.WelcomeScreen
 import com.dcr.iqa.data.model.Option
 import com.dcr.iqa.data.model.Question
 import com.dcr.iqa.data.model.Quiz
 import com.dcr.iqa.data.model.QuizData
+import com.dcr.iqa.ui.screens.quiz.overview.QuizFlowViewModel
 import com.dcr.iqa.ui.screens.quiz.overview.QuizOverviewScreen
 import com.dcr.iqa.ui.screens.quiz.result.QuizResultsScreen
 import com.dcr.iqa.ui.screens.quiz.review.QuizReviewScreen
@@ -50,58 +54,50 @@ fun QuizApp(viewModel: AppNavigationViewModel = hiltViewModel()) {
         composable("main_screen") {
             MainScreen(mainNavController = primaryNavController, quizzes = availableQuizzes)
         }
-        composable("quiz_overview/{quizId}") { backStackEntry ->
-            val quizId = backStackEntry.arguments?.getString("quizId")
-            val selectedQuiz = availableQuizzes.find { it.id == quizId }
-
-            if (selectedQuiz != null) {
-                QuizOverviewScreen(navController = primaryNavController, quiz = selectedQuiz)
-            } else {
-                // Optional: Handle case where quizId is not found
-                // For now, you can just navigate back or show an error
-                primaryNavController.popBackStack()
-            }
-        }
-        composable("quiz_taking/{quizId}") { backStackEntry ->
-            val quizId = backStackEntry.arguments?.getString("quizId")
-
-            // --- In a real app, you'd make a network call with quizId. ---
-            // For this example, we'll just use the hardcoded quiz data you provided.
-            // We'll pretend we "fetched" it.
-            val quizData = getHardcodedQuizData() // A helper function to get the data
-
-            // --- NEW GLOBAL TIMER LOGIC ---
-            // 1. Calculate the total time for the entire quiz in seconds.
-            // We assume the total time is the sum of times for all questions.
-            val totalQuizTimeInSeconds = remember { quizData.questions.sumOf { it.time } }
-
-            // 2. State for the global timer.
-            var remainingTimeInSeconds by remember { mutableIntStateOf(totalQuizTimeInSeconds) }
-
-            // 3. This effect runs ONCE when the quiz starts. `key1 = Unit` ensures it doesn't restart.
-            LaunchedEffect(key1 = Unit) {
-                while (remainingTimeInSeconds > 0) {
-                    delay(1000L)
-                    remainingTimeInSeconds--
-                }
-                // When the timer hits 0, auto-submit by navigating to the results screen.
-                primaryNavController.navigate("results_screen") {
-                    // Clear the quiz screen from the back stack
-                    popUpTo("quiz_taking/$quizId") { inclusive = true }
-                }
-            }
-
-            if (quizId != null) {
-                QuizTakingScreen(
-                    navController = primaryNavController,
-                    quizData = quizData,
-                    remainingTime = remainingTimeInSeconds,
-                    totalTime = totalQuizTimeInSeconds
-                )
-            } else {
-                primaryNavController.popBackStack()
-            }
-        }
+        quizFlowGraph(primaryNavController)
+//        composable("quiz_overview/{sessionId}") {
+//            QuizOverviewScreen(navController = primaryNavController)
+//        }
+//        composable("quiz_taking/{quizId}") { backStackEntry ->
+//            val quizId = backStackEntry.arguments?.getString("quizId")
+//
+//            // --- In a real app, you'd make a network call with quizId. ---
+//            // For this example, we'll just use the hardcoded quiz data you provided.
+//            // We'll pretend we "fetched" it.
+//            val quizData = getHardcodedQuizData() // A helper function to get the data
+//
+//            // --- NEW GLOBAL TIMER LOGIC ---
+//            // 1. Calculate the total time for the entire quiz in seconds.
+//            // We assume the total time is the sum of times for all questions.
+//            val totalQuizTimeInSeconds = remember { quizData.questions.sumOf { it.time } }
+//
+//            // 2. State for the global timer.
+//            var remainingTimeInSeconds by remember { mutableIntStateOf(totalQuizTimeInSeconds) }
+//
+//            // 3. This effect runs ONCE when the quiz starts. `key1 = Unit` ensures it doesn't restart.
+//            LaunchedEffect(key1 = Unit) {
+//                while (remainingTimeInSeconds > 0) {
+//                    delay(1000L)
+//                    remainingTimeInSeconds--
+//                }
+//                // When the timer hits 0, auto-submit by navigating to the results screen.
+//                primaryNavController.navigate("results_screen") {
+//                    // Clear the quiz screen from the back stack
+//                    popUpTo("quiz_taking/$quizId") { inclusive = true }
+//                }
+//            }
+//
+//            if (quizId != null) {
+//                QuizTakingScreen(
+//                    navController = primaryNavController,
+//                    quizData = quizData,
+//                    remainingTime = remainingTimeInSeconds,
+//                    totalTime = totalQuizTimeInSeconds
+//                )
+//            } else {
+//                primaryNavController.popBackStack()
+//            }
+//        }
 
         composable("results_screen") {
             QuizResultsScreen(navController = primaryNavController)
@@ -117,6 +113,35 @@ fun QuizApp(viewModel: AppNavigationViewModel = hiltViewModel()) {
     }
 
 
+}
+
+fun NavGraphBuilder.quizFlowGraph(navController: NavController) {
+    navigation(
+        // The first screen to show in this flow
+        startDestination = "quiz_overview/{sessionId}",
+        // A unique route name for the entire graph. We still pass the quizId here.
+        route = "quiz_flow/{sessionId}"
+    ) {
+        // First screen in the graph
+        composable("quiz_overview/{sessionId}") { backStackEntry ->
+            // Get the NavController for the PARENT graph
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry("quiz_flow/{sessionId}")
+            }
+            // Use the parent's backStackEntry to get the shared ViewModel
+            val viewModel: QuizFlowViewModel = hiltViewModel(parentEntry)
+            QuizOverviewScreen(navController = navController, viewModel = viewModel)
+        }
+
+        // Second screen in the graph
+        composable("quiz_taking") { backStackEntry ->
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry("quiz_flow/{sessionId}")
+            }
+            val viewModel: QuizFlowViewModel = hiltViewModel(parentEntry)
+            QuizTakingScreen(navController = navController, viewModel = viewModel)
+        }
+    }
 }
 
 fun getHardcodedQuizData(): QuizData {

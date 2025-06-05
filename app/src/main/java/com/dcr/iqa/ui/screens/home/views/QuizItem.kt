@@ -21,15 +21,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.dcr.iqa.data.model.Quiz
+import com.dcr.iqa.data.model.response.AvailableQuiz
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuizItem(quiz: Quiz, navController: NavController) {
+fun QuizItem(session: AvailableQuiz, navController: NavController) {
+    val quiz = session.quiz
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = { navController.navigate("quiz_overview/${quiz.id}") }
+        onClick = { navController.navigate("quiz_overview/${session.sessionId}") }
     ) {
         Row(
             modifier = Modifier
@@ -46,12 +47,6 @@ fun QuizItem(quiz: Quiz, navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = quiz.description, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "${quiz.questionCount} Questions",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,

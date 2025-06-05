@@ -11,22 +11,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.dcr.iqa.data.model.response.UserResponse
 import com.dcr.iqa.ui.screens.profile.views.ProfileClickableRow
 import com.dcr.iqa.ui.screens.profile.views.ProfileInfoRow
 import com.dcr.iqa.ui.screens.profile.views.SectionHeader
+import androidx.compose.runtime.getValue
 
 @Composable
 fun ProfileScreen(
     navController: NavController,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val user: UserResponse? by viewModel.userState.collectAsState()
     // In a real app, you would get the user data from a ViewModel
-    val userName = "Alex"
-    val userEmail = "alex.doe@example.com"
+    val userName = user?.username ?: "Guest"
+    val userEmail = user?.email ?: "No email"
 
     Column(
         modifier = Modifier

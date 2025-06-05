@@ -21,18 +21,16 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.dcr.iqa.data.model.QuizData
 import com.dcr.iqa.ui.components.QuizTopAppBar
+import com.dcr.iqa.ui.screens.quiz.overview.QuizFlowViewModel
 import com.dcr.iqa.ui.screens.quiz.taking.views.OptionItem
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -40,19 +38,33 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizTakingScreen(
-    navController: NavController, quizData: QuizData, remainingTime: Int, // Receives remaining time
-    totalTime: Int      // Receives total time for the progress bar
+    navController: NavController,
+    viewModel: QuizFlowViewModel
 ) {
-    var currentQuestionIndex by remember { mutableIntStateOf(0) }
-    val userAnswers = remember { mutableStateMapOf<String, String>() }
-    val currentQuestion = quizData.questions[currentQuestionIndex]
-    val selectedOptionId = userAnswers[currentQuestion.id]
+    val uiState by viewModel.uiState.collectAsState()
+    val quizDetails = uiState.quizDetails?.quiz ?: return
+
+    val currentQuestion = quizDetails.questions[uiState.currentQuestionIndex]
+    val selectedOptionId = uiState.userAnswers[currentQuestion.id]
 
     // Helper function to format seconds into MM:SS
     fun formatTime(seconds: Int): String {
         val minutes = TimeUnit.SECONDS.toMinutes(seconds.toLong())
         val remainingSeconds = seconds - TimeUnit.MINUTES.toSeconds(minutes)
         return String.format(Locale.US, "%02d:%02d", minutes, remainingSeconds)
+    }
+
+    // Listen for the quiz finished state to navigate away
+    LaunchedEffect (uiState.quizFinished) {
+        if (uiState.quizFinished) {
+            navController.navigate("results_screen") {
+                popUpTo("quiz_taking") { inclusive = true }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) { // Unit key means this runs once on initial composition
+        viewModel.startQuizTimerIfNotRunning()
     }
 
     BackHandler (enabled = true) {
@@ -62,7 +74,7 @@ fun QuizTakingScreen(
 
     Scaffold(
         topBar = {
-            QuizTopAppBar(title = quizData.title, actions = {
+            QuizTopAppBar(title = quizDetails.title, actions = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(end = 16.dp)
@@ -70,7 +82,7 @@ fun QuizTakingScreen(
                     Icon(Icons.Default.Timer, contentDescription = "Time left")
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = formatTime(remainingTime),
+                        text = formatTime(uiState.remainingTimeSeconds),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -83,12 +95,18 @@ fun QuizTakingScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 3. UI for the progress bar
-            val progress by animateFloatAsState(
-                targetValue = remainingTime.toFloat() / totalTime.toFloat(), label = "timerProgress"
+            // UI for the progress bar
+            val progressValue = if (uiState.totalQuizTimeSeconds > 0) {
+                uiState.remainingTimeSeconds.toFloat() / uiState.totalQuizTimeSeconds.toFloat()
+            } else {
+                0f // Avoid division by zero if totalTime is not yet set or is zero
+            }
+            val animatedProgress by animateFloatAsState(
+                targetValue = progressValue, label = "timerProgress"
             )
             LinearProgressIndicator(
-                progress = { progress }, modifier = Modifier.fillMaxWidth()
+            progress = { animatedProgress },
+            modifier = Modifier.fillMaxWidth()
             )
 
             Column(
@@ -111,7 +129,8 @@ fun QuizTakingScreen(
                             .weight(1f)
                     )
                     Text(
-                        text = "${currentQuestionIndex + 1}/${quizData.questions.size}",
+                        // Use currentQuestionIndex from uiState and total questions from quizInfo
+                        text = "${uiState.currentQuestionIndex + 1}/${quizDetails.questions.size}",
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = 8.dp)
                     )
@@ -125,7 +144,7 @@ fun QuizTakingScreen(
                             optionText = option.optionText,
                             isSelected = option.id == selectedOptionId,
                             onOptionSelected = {
-                                userAnswers[currentQuestion.id] = option.id
+                               viewModel.selectAnswer(currentQuestion.id, option.id)
                             })
                     }
                 }
@@ -138,26 +157,24 @@ fun QuizTakingScreen(
                 ) {
                     // Previous Button
                     OutlinedButton(
-                        onClick = { if (currentQuestionIndex > 0) currentQuestionIndex-- },
-                        enabled = currentQuestionIndex > 0 // Disabled on first question
+                        onClick = { viewModel.previousQuestion() }, // Use ViewModel function
+                        enabled = uiState.currentQuestionIndex > 0 // Use uiState for index
                     ) {
                         Text("Previous")
                     }
 
                     // Next/Finish Button
-                    val isLastQuestion = currentQuestionIndex == quizData.questions.lastIndex
+                    val isLastQuestion = uiState.currentQuestionIndex == quizDetails.questions.lastIndex
                     Button(
                         onClick = {
                             if (isLastQuestion) {
-                                navController.navigate("results_screen") {
-                                    popUpTo("quiz_taking/${quizData.id}") { inclusive = true }
-                                }
+                                viewModel.finishQuiz()
                             } else {
-                                currentQuestionIndex++
+                                viewModel.nextQuestion()
                             }
                         },
                         // Enabled only after an answer is selected
-                        enabled = userAnswers.containsKey(currentQuestion.id)
+                        enabled = selectedOptionId != null
                     ) {
                         Text(if (isLastQuestion) "Finish" else "Next")
                     }
