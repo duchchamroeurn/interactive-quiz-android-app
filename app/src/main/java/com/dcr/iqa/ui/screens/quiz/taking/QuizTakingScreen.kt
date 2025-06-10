@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.dcr.iqa.ui.components.QuizTopAppBar
@@ -55,7 +58,7 @@ fun QuizTakingScreen(
     }
 
     // Listen for the quiz finished state to navigate away
-    LaunchedEffect (uiState.quizFinished) {
+    LaunchedEffect(uiState.quizFinished) {
         if (uiState.quizFinished) {
             navController.navigate("results_screen") {
                 popUpTo("quiz_taking") { inclusive = true }
@@ -67,7 +70,7 @@ fun QuizTakingScreen(
         viewModel.startQuizTimerIfNotRunning()
     }
 
-    BackHandler (enabled = true) {
+    BackHandler(enabled = true) {
         // We leave this empty to block the back action.
         // The user cannot leave the quiz screen by pressing back.
     }
@@ -105,9 +108,21 @@ fun QuizTakingScreen(
                 targetValue = progressValue, label = "timerProgress"
             )
             LinearProgressIndicator(
-            progress = { animatedProgress },
-            modifier = Modifier.fillMaxWidth()
+                progress = { animatedProgress },
+                modifier = Modifier.fillMaxWidth()
             )
+
+            // Display submission error if it exists
+            uiState.submissionError?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Column(
                 modifier = Modifier
@@ -144,27 +159,30 @@ fun QuizTakingScreen(
                             optionText = option.optionText,
                             isSelected = option.id == selectedOptionId,
                             onOptionSelected = {
-                               viewModel.selectAnswer(currentQuestion.id, option.id)
+                                viewModel.selectAnswer(currentQuestion.id, option.id)
                             })
                     }
                 }
 
                 // Navigation Buttons
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp), // Added padding here
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Previous Button
                     OutlinedButton(
-                        onClick = { viewModel.previousQuestion() }, // Use ViewModel function
-                        enabled = uiState.currentQuestionIndex > 0 // Use uiState for index
+                        onClick = { viewModel.previousQuestion() },
+                        enabled = uiState.currentQuestionIndex > 0 && !uiState.isSubmitting // Disable during submission
                     ) {
                         Text("Previous")
                     }
 
-                    // Next/Finish Button
-                    val isLastQuestion = uiState.currentQuestionIndex == quizDetails.questions.lastIndex
+                    val isLastQuestion = uiState.quizDetails?.quiz?.questions?.let {
+                        uiState.currentQuestionIndex == it.size - 1
+                    } == true
+
                     Button(
                         onClick = {
                             if (isLastQuestion) {
@@ -173,10 +191,17 @@ fun QuizTakingScreen(
                                 viewModel.nextQuestion()
                             }
                         },
-                        // Enabled only after an answer is selected
-                        enabled = selectedOptionId != null
+                        enabled = selectedOptionId != null && !uiState.isSubmitting // Disable during submission
                     ) {
-                        Text(if (isLastQuestion) "Finish" else "Next")
+                        if (uiState.isSubmitting && isLastQuestion) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(if (isLastQuestion) "Finish" else "Next")
+                        }
                     }
                 }
             }

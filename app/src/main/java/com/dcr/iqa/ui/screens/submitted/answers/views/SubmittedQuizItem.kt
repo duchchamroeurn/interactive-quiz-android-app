@@ -1,5 +1,6 @@
 package com.dcr.iqa.ui.screens.submitted.answers.views
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,18 +23,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.dcr.iqa.data.model.SubmittedQuiz
+import com.dcr.iqa.data.model.response.QuizSubmissionSummary
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
 fun SubmittedQuizItem(
-    submittedQuiz: SubmittedQuiz,
+    submittedQuiz: QuizSubmissionSummary,
     onClick: () -> Unit
 ) {
-    val scorePercentage = submittedQuiz.score.toFloat() / submittedQuiz.totalQuestions.toFloat()
-    val formattedDate = remember {
-        SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(submittedQuiz.submissionDate)
+    val scorePercentage = if (submittedQuiz.total > 0) {
+        (submittedQuiz.numberCorrectAnswer / submittedQuiz.total).toFloat()
+    } else {
+        0f
+    }
+    val formattedDate = remember(submittedQuiz.submittedDate) {
+        try {
+            val dateString = submittedQuiz.submittedDate
+            //val localDateTime = LocalDateTime.parse(dateString)
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.US)
+            val formatter = SimpleDateFormat("MMMM dd, yyyy 'at' hh:mm a", Locale.US)
+            val date: java.util.Date? = parser.parse(dateString)
+            date?.let { formatter.format(it) }
+        } catch (e: Exception) {
+            Log.d("Time Issue", e.message.toString())
+            "Unknown date" // Fallback in case of parsing error
+        }
     }
 
     Card(
@@ -49,7 +64,7 @@ fun SubmittedQuizItem(
             // Left side: Score Ring
             ScoreRing(
                 scorePercentage = scorePercentage,
-                scoreText = "${submittedQuiz.score}/${submittedQuiz.totalQuestions}"
+                scoreText = "${submittedQuiz.numberCorrectAnswer.toInt()}/${submittedQuiz.total.toInt()}"
             )
             Spacer(modifier = Modifier.width(16.dp))
             // Right side: Quiz Details

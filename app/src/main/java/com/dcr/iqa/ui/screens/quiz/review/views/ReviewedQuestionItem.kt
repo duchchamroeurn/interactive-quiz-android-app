@@ -14,9 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dcr.iqa.data.model.ReviewedQuestion
+import com.dcr.iqa.data.model.response.QuestionDetail
 
 @Composable
-fun ReviewedQuestionItem(question: ReviewedQuestion, questionNumber: Int) {
+fun ReviewedQuestionItem(question: QuestionDetail, questionNumber: Int, userSelectedOptionId: String?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -31,8 +32,8 @@ fun ReviewedQuestionItem(question: ReviewedQuestion, questionNumber: Int) {
             question.options.forEach { option ->
                 ReviewedOptionRow(
                     optionText = option.optionText,
-                    isCorrect = option.id == question.correctOptionId,
-                    isSelected = option.id == question.userSelectedOptionId
+                    isCorrect = option.correct,
+                    isSelected = option.id == userSelectedOptionId
                 )
             }
         }

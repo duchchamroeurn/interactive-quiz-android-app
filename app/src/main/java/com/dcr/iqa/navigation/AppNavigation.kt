@@ -106,7 +106,7 @@ fun QuizApp(viewModel: AppNavigationViewModel = hiltViewModel()) {
             SubmittedAnswersScreen(navController = primaryNavController)
         }
 
-        composable("quiz_review") {
+        composable("quiz_review/{sessionId}") {
             QuizReviewScreen(navController = primaryNavController)
         }
 

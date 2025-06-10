@@ -1,10 +1,13 @@
 package com.dcr.iqa.ui.screens.quiz.overview
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dcr.iqa.data.model.request.SubmittedAnswerRequest
 import com.dcr.iqa.data.model.response.QuizSessionDetails
 import com.dcr.iqa.data.respository.QuizRepository
+import com.dcr.iqa.data.respository.UserSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,12 +30,16 @@ data class QuizFlowUiState(
 
     val remainingTimeSeconds: Int = 0,
     val totalQuizTimeSeconds: Int = 0,
-    val isTimerRunning: Boolean = false
+    val isTimerRunning: Boolean = false,
+
+    val isSubmitting: Boolean = false, // New state for submission loading
+    val submissionError: String? = null
 )
 
 @HiltViewModel
 class QuizFlowViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
+    private val sessionManager: UserSessionManager,
     savedStateHandle: SavedStateHandle // Hilt provides this to access navigation arguments
 ) : ViewModel() {
 
@@ -89,10 +96,49 @@ class QuizFlowViewModel @Inject constructor(
     }
 
     fun finishQuiz() {
-        timerJob?.cancel() // Stop the timer if quiz is finished manually
-        // TODO: Here you would submit the answers to your backend
-        _uiState.update { it.copy(quizFinished = true, isLoading = false) } // Ensure loading is false
+        timerJob?.cancel() // Stop any active timer
+        _uiState.update { it.copy(isSubmitting = true, submissionError = null) }
+
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val quizDetails = currentState.quizDetails
+            val user = sessionManager.getUser() // Get the logged-in user
+
+            if (quizDetails == null || user == null) {
+                _uiState.update { it.copy(isSubmitting = false, submissionError = "User or Quiz data missing.") }
+                return@launch
+            }
+
+            val submittedAnswersList = currentState.userAnswers.map { (questionId, optionId) ->
+                SubmittedAnswerRequest(questionId = questionId, submittedValue = optionId)
+            }
+
+            val result = quizRepository.submitQuizAnswers(
+                sessionId = quizDetails.sessionId,
+                userId = user.userId, // Assuming UserData from UserSessionManager has userId
+                answers = submittedAnswersList
+            )
+
+            result.onSuccess { successMessage ->
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        quizFinished = true, // Trigger navigation to results
+                        submissionError = null // Clear any previous error
+                    )
+                }
+                // Log successMessage if needed
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        submissionError = error.message ?: "Failed to submit answers."
+                    )
+                }
+            }
+        }
     }
+
     fun startQuizTimerIfNotRunning() {
         if (_uiState.value.isTimerRunning || _uiState.value.quizDetails == null || _uiState.value.quizFinished) {
             return // Don't start if already running, data not loaded, or quiz finished
