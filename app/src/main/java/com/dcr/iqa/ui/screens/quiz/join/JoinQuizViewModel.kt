@@ -1,9 +1,10 @@
-package com.dcr.iqa.ui.screens.home.views
+package com.dcr.iqa.ui.screens.quiz.join
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dcr.iqa.data.model.response.QuizSessionDetails
 import com.dcr.iqa.data.respository.QuizRepository
+import com.dcr.iqa.data.respository.UserSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,13 +21,15 @@ data class JoinQuizUiState(
 
 @HiltViewModel
 class JoinQuizViewModel @Inject constructor(
-    private val quizRepository: QuizRepository
+    private val quizRepository: QuizRepository,
+    private val userSessionManager: UserSessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(JoinQuizUiState())
     val uiState: StateFlow<JoinQuizUiState> = _uiState.asStateFlow()
 
     fun onJoinQuizClicked(sessionCode: String) {
+        val userId = userSessionManager.getUser()?.userId
         if (sessionCode.isBlank()) {
             _uiState.update { it.copy(joinError = "Session code cannot be empty.") }
             return
@@ -34,7 +37,7 @@ class JoinQuizViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, joinError = null, joinedQuizDetails = null) }
 
         viewModelScope.launch {
-            val result = quizRepository.joinQuizBySessionCode(sessionCode.trim().uppercase())
+            val result = quizRepository.joinQuizBySessionCode(sessionCode.trim(), userId!!)
             result.onSuccess { details ->
                 _uiState.update {
                     it.copy(isLoading = false, joinedQuizDetails = details)

@@ -9,7 +9,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.dcr.iqa.ui.screens.home.HomeViewModel
-import com.dcr.iqa.ui.screens.home.views.JoinQuizSection
 import com.dcr.iqa.ui.screens.home.views.QuizItem
 import com.dcr.iqa.ui.screens.home.views.WelcomeSection
 
@@ -38,10 +37,11 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                WelcomeSection(userName = uiState.username)
-            }
-            item {
-                JoinQuizSection(navController)
+                WelcomeSection(
+                    userName = uiState.username,
+                    onJoinQuizClicked = {
+                    navController.navigate("join_quiz_screen")
+                })
             }
             item {
                 Text(

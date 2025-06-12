@@ -1,5 +1,6 @@
 package com.dcr.iqa.data.remote
 
+import com.dcr.iqa.data.model.request.JoinSessionRequest
 import com.dcr.iqa.data.model.request.UserSubmitAnswersRequest
 import com.dcr.iqa.data.model.response.PaginatedResponse
 import com.dcr.iqa.data.model.response.QuizReviewData
@@ -19,9 +20,9 @@ interface SessionService {
         @Path("sessionId") sessionId: String
     ): SuccessResponse<QuizSessionDetails>
 
-    @GET("api/v1/session/code/{code}") // Uses the session code as a path parameter
+    @POST("api/v1/session/join") // Uses the session code as a path parameter
     suspend fun joinQuizBySessionCode(
-        @Path("code") sessionCode: String
+        @Body requestBody: JoinSessionRequest
     ): SuccessResponse<QuizSessionDetails>
 
     @POST("api/v1/answer/session/{sessionId}/user/{userId}")

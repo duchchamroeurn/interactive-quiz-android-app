@@ -1,6 +1,5 @@
 package com.dcr.iqa.ui.screens.quiz.overview
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

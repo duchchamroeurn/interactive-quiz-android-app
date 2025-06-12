@@ -23,7 +23,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class) // This makes the dependencies live as long as the app does
 object AppModule {
 
-    private const val BASE_URL = "http://10.10.100.56:9099/"
+    private const val BASE_URL = "http://10.10.100.85:9099/"
 
     @Provides
     @Singleton // This ensures only one instance of the repository is ever created

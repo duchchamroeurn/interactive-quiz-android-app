@@ -1,20 +1,26 @@
 package com.dcr.iqa.data.respository
 
+import android.util.Log
+import com.dcr.iqa.data.model.request.JoinSessionRequest
 import com.dcr.iqa.data.model.request.SubmittedAnswerRequest
 import com.dcr.iqa.data.model.request.UserSubmitAnswersRequest
+import com.dcr.iqa.data.model.response.ApiErrorResponse
 import com.dcr.iqa.data.model.response.AvailableQuiz
 import com.dcr.iqa.data.model.response.QuizReviewData
 import com.dcr.iqa.data.model.response.QuizSessionDetails
 import com.dcr.iqa.data.model.response.QuizSubmissionSummary
 import com.dcr.iqa.data.remote.QuizService
 import com.dcr.iqa.data.remote.SessionService
+import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class QuizRepository @Inject constructor(
     private val quizService: QuizService,
-    private val  sessionService: SessionService
+    private val  sessionService: SessionService,
+    private val json: Json
 ) {
     /**
      * A new function to get quizzes for a specific user by their ID.
@@ -45,16 +51,31 @@ class QuizRepository @Inject constructor(
         }
     }
 
-    suspend fun joinQuizBySessionCode(sessionCode: String): Result<QuizSessionDetails> {
+    suspend fun joinQuizBySessionCode(sessionCode: String, userId: String,): Result<QuizSessionDetails> {
         return try {
-            val response = sessionService.joinQuizBySessionCode(sessionCode)
+            val request = JoinSessionRequest(sessionCode, userId)
+            val response = sessionService.joinQuizBySessionCode(request)
             if (response.success && response.data != null) {
                 Result.success(response.data)
             } else {
                 Result.failure(Exception(response.message))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
+        } catch (e: HttpException) {
+            // Error Case: The server responded with an error (e.g., 404, 400, 500)
+            val errorJson = e.response()?.errorBody()?.string()
+            if (errorJson != null) {
+                try {
+                    // Try to parse the specific error structure
+                    val errorResponse = json.decodeFromString<ApiErrorResponse>(errorJson)
+                    Result.failure(Exception(errorResponse.message))
+                } catch (e: Exception) {
+                    // If parsing fails, fall back to a generic message
+                    Result.failure(Exception(e.message))
+                }
+            } else {
+                // If the error body is empty, use the HTTP status message
+                Result.failure(Exception("Error: ${e.code()} ${e.message()}"))
+            }
         }
     }
 

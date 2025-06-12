@@ -17,14 +17,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.dcr.iqa.data.model.Quiz
 import com.dcr.iqa.data.model.TabBarItem
 import com.dcr.iqa.ui.components.QuizTopAppBar
 import com.dcr.iqa.ui.screens.profile.ProfileScreen
 
 @OptIn(ExperimentalMaterial3Api::class) // Required for TopAppBar
 @Composable
-fun MainScreen(mainNavController: NavController, quizzes: List<Quiz>) {
+fun MainScreen(mainNavController: NavController) {
     val navController = rememberNavController()
 
     // List of tabs (no changes here)
