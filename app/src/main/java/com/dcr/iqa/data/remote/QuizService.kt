@@ -4,6 +4,7 @@ import com.dcr.iqa.data.model.response.AvailableQuiz
 import com.dcr.iqa.data.model.response.PaginatedResponse
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface QuizService {
 
@@ -13,6 +14,7 @@ interface QuizService {
      */
     @GET("/api/v1/user/{userId}/quizzes/available")
     suspend fun getAvailableQuizzesForUser(
-        @Path("userId") userId: String
+        @Path("userId") userId: String,
+        @Query("type") type: String,
     ): PaginatedResponse<AvailableQuiz>
 }

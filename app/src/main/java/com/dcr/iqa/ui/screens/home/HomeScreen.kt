@@ -1,5 +1,6 @@
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,7 +10,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.dcr.iqa.ui.screens.home.HomeViewModel
+import com.dcr.iqa.ui.screens.home.views.PublicQuizItem
+import com.dcr.iqa.ui.screens.home.views.QuizEmptyState
 import com.dcr.iqa.ui.screens.home.views.QuizItem
+import com.dcr.iqa.ui.screens.home.views.SeeAllCard
 import com.dcr.iqa.ui.screens.home.views.WelcomeSection
 
 @Composable
@@ -40,23 +44,63 @@ fun HomeScreen(
                 WelcomeSection(
                     userName = uiState.username,
                     onJoinQuizClicked = {
-                    navController.navigate("join_quiz_screen")
-                })
+                        navController.navigate("join_quiz_screen")
+                    })
             }
+
+            if (uiState.publicQuizzes.isNotEmpty()) {
+                item {
+                    Column {
+                        Text(
+                            text = "Public Quizzes",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(uiState.publicQuizzes) { availableQuiz ->
+                                PublicQuizItem(
+                                    quiz = availableQuiz.quiz,
+                                    onClick = { navController.navigate("quiz_flow/${availableQuiz.sessionId}") }
+                                )
+                            }
+                            // Logic to show "See All" card
+                            if (uiState.publicQuizzes.size > 10) { // Or another threshold
+                                item {
+                                    SeeAllCard(onClick = { /* TODO: Navigate to a dedicated public quizzes list screen */ })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
-                Text(
-                    text = "Or Practice a Quiz",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Text(
+                        text = "Quizzes Available For You",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+                }
             }
-            items(uiState.availableQuizzes) { availableQuiz ->
-                // You might need to adjust QuizItem to accept an AvailableQuiz object
-                // or just its nested quiz object.
-                QuizItem(
-                    session = availableQuiz,
-                    navController = navController
-                )
+            if (uiState.availableQuizzes.isNotEmpty()) {
+                items(uiState.availableQuizzes) { availableQuiz ->
+                    QuizItem(
+                        session = availableQuiz,
+                        navController = navController,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            } else {
+                item {
+                    QuizEmptyState()
+                }
             }
         }
     }

@@ -25,9 +25,9 @@ class QuizRepository @Inject constructor(
     /**
      * A new function to get quizzes for a specific user by their ID.
      */
-    suspend fun getAvailableQuizzesForUser(userId: String): Result<List<AvailableQuiz>> {
+    suspend fun getAvailableQuizzesForUser(userId: String, type: String = "PRIVATE"): Result<List<AvailableQuiz>> {
         return try {
-            val response = quizService.getAvailableQuizzesForUser(userId) // Pass the userId to the service
+            val response = quizService.getAvailableQuizzesForUser(userId, type) // Pass the userId to the service
             if (response.success) {
                 Result.success(response.data)
             } else {

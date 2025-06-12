@@ -25,10 +25,12 @@ import com.dcr.iqa.data.model.response.AvailableQuiz
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuizItem(session: AvailableQuiz, navController: NavController) {
+fun QuizItem(session: AvailableQuiz,
+             navController: NavController,
+             modifier: Modifier = Modifier) {
     val quiz = session.quiz
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = { navController.navigate("quiz_overview/${session.sessionId}") }
     ) {
